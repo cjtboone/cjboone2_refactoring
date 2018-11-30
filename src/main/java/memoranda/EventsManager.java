@@ -32,6 +32,14 @@ import nu.xom.ParentNode;
  *  
  */
 /*$Id: EventsManager.java,v 1.11 2004/10/06 16:00:11 ivanrise Exp $*/
+
+// TASK 2-2 SMELL BETWEEN CLASSES
+// This file previously contained the code for the three separate
+// classes of Day.java, Month.java, and Year.java. While technically
+// separate classes, it seemed a bit unusual to have so many classes
+// within a single file so they were refactored into their own class
+// files.
+
 public class EventsManager {
 /*	public static final String NS_JNEVENTS =
 		"http://www.openmechanics.org/2003/jnotes-events-file";
@@ -139,23 +147,35 @@ public class EventsManager {
 		int mm,
 		String text,
 		boolean workDays) {
-		Element el = new Element("event");
+	    
+	    //TASK 2-1 SMELL WITHIN A CLASS
+	    // This method almost entirely copies the code from
+	    // the above method, createEvent(). As such, I have
+	    // changed it to use that method for initial
+	    // event creation, and then add the unique
+	    // method data.
+	    
+	    Element el = createEvent(startDate, hh, mm, text).getContent();
+	    Day d = getDay(startDate);
+	    d.getElement().removeChild(el);
+	    
+		//Element el = new Element("event");
 		Element rep = _root.getFirstChildElement("repeatable");
 		if (rep == null) {
 			rep = new Element("repeatable");
 			_root.appendChild(rep);
 		}
 		el.addAttribute(new Attribute("repeat-type", String.valueOf(type)));
-		el.addAttribute(new Attribute("id", Util.generateId()));
-		el.addAttribute(new Attribute("hour", String.valueOf(hh)));
-		el.addAttribute(new Attribute("min", String.valueOf(mm)));
+		//el.addAttribute(new Attribute("id", Util.generateId()));
+		//el.addAttribute(new Attribute("hour", String.valueOf(hh)));
+		//el.addAttribute(new Attribute("min", String.valueOf(mm)));
 		el.addAttribute(new Attribute("startDate", startDate.toString()));
 		if (endDate != null)
 			el.addAttribute(new Attribute("endDate", endDate.toString()));
 		el.addAttribute(new Attribute("period", String.valueOf(period)));
 		// new attribute for wrkin days - ivanrise
 		el.addAttribute(new Attribute("workingDays",String.valueOf(workDays)));
-		el.appendChild(text);
+		//el.appendChild(text);
 		rep.appendChild(el);
 		return new EventImpl(el);
 	}
@@ -291,177 +311,57 @@ public class EventsManager {
 			return null;
 		return m.getDay(date.getDay());
 	}
-
-	static class Year {
-		Element yearElement = null;
-
-		public Year(Element el) {
-			yearElement = el;
-		}
-
-		public int getValue() {
-			return new Integer(yearElement.getAttribute("year").getValue())
-				.intValue();
-		}
-
-		public Month getMonth(int m) {
-			Elements ms = yearElement.getChildElements("month");
-			String mm = new Integer(m).toString();
-			for (int i = 0; i < ms.size(); i++)
-				if (ms.get(i).getAttribute("month").getValue().equals(mm))
-					return new Month(ms.get(i));
-			//return createMonth(m);
-			return null;
-		}
-
-		private Month createMonth(int m) {
-			Element el = new Element("month");
-			el.addAttribute(new Attribute("month", new Integer(m).toString()));
-			yearElement.appendChild(el);
-			return new Month(el);
-		}
-
-		public Vector getMonths() {
-			Vector v = new Vector();
-			Elements ms = yearElement.getChildElements("month");
-			for (int i = 0; i < ms.size(); i++)
-				v.add(new Month(ms.get(i)));
-			return v;
-		}
-
-		public Element getElement() {
-			return yearElement;
-		}
-
-	}
-
-	static class Month {
-		Element mElement = null;
-
-		public Month(Element el) {
-			mElement = el;
-		}
-
-		public int getValue() {
-			return new Integer(mElement.getAttribute("month").getValue())
-				.intValue();
-		}
-
-		public Day getDay(int d) {
-			if (mElement == null)
-				return null;
-			Elements ds = mElement.getChildElements("day");
-			String dd = new Integer(d).toString();
-			for (int i = 0; i < ds.size(); i++)
-				if (ds.get(i).getAttribute("day").getValue().equals(dd))
-					return new Day(ds.get(i));
-			//return createDay(d);
-			return null;
-		}
-
-		private Day createDay(int d) {
-			Element el = new Element("day");
-			el.addAttribute(new Attribute("day", new Integer(d).toString()));
-			el.addAttribute(
-				new Attribute(
-					"date",
-					new CalendarDate(
-						d,
-						getValue(),
-						new Integer(
-							((Element) mElement.getParent())
-								.getAttribute("year")
-								.getValue())
-							.intValue())
-						.toString()));
-
-			mElement.appendChild(el);
-			return new Day(el);
-		}
-
-		public Vector getDays() {
-			if (mElement == null)
-				return null;
-			Vector v = new Vector();
-			Elements ds = mElement.getChildElements("day");
-			for (int i = 0; i < ds.size(); i++)
-				v.add(new Day(ds.get(i)));
-			return v;
-		}
-
-		public Element getElement() {
-			return mElement;
-		}
-
-	}
-
-	static class Day {
-		Element dEl = null;
-
-		public Day(Element el) {
-			dEl = el;
-		}
-
-		public int getValue() {
-			return new Integer(dEl.getAttribute("day").getValue()).intValue();
-		}
-
-		/*
-		 * public Note getNote() { return new NoteImpl(dEl);
-		 */
-
-		public Element getElement() {
-			return dEl;
-		}
-	}
-/*
-	static class EventsVectorSorter {
-
-		private static Vector keys = null;
-
-		private static int toMinutes(Object obj) {
-			Event ev = (Event) obj;
-			return ev.getHour() * 60 + ev.getMinute();
-		}
-
-		private static void doSort(int L, int R) { // Hoar's QuickSort
-			int i = L;
-			int j = R;
-			int x = toMinutes(keys.get((L + R) / 2));
-			Object w = null;
-			do {
-				while (toMinutes(keys.get(i)) < x) {
-					i++;
-				}
-				while (x < toMinutes(keys.get(j))) {
-					j--;
-				}
-				if (i <= j) {
-					w = keys.get(i);
-					keys.set(i, keys.get(j));
-					keys.set(j, w);
-					i++;
-					j--;
-				}
-			}
-			while (i <= j);
-			if (L < j) {
-				doSort(L, j);
-			}
-			if (i < R) {
-				doSort(i, R);
-			}
-		}
-
-		public static void sort(Vector theKeys) {
-			if (theKeys == null)
-				return;
-			if (theKeys.size() <= 0)
-				return;
-			keys = theKeys;
-			doSort(0, keys.size() - 1);
-		}
-
-	}
-*/
 }
+
+//TASK 2-2 SMELL BETWEEN CLASSES
+
+/*
+static class EventsVectorSorter {
+
+    private static Vector keys = null;
+
+    private static int toMinutes(Object obj) {
+        Event ev = (Event) obj;
+        return ev.getHour() * 60 + ev.getMinute();
+    }
+
+    private static void doSort(int L, int R) { // Hoar's QuickSort
+        int i = L;
+        int j = R;
+        int x = toMinutes(keys.get((L + R) / 2));
+        Object w = null;
+        do {
+            while (toMinutes(keys.get(i)) < x) {
+                i++;
+            }
+            while (x < toMinutes(keys.get(j))) {
+                j--;
+            }
+            if (i <= j) {
+                w = keys.get(i);
+                keys.set(i, keys.get(j));
+                keys.set(j, w);
+                i++;
+                j--;
+            }
+        }
+        while (i <= j);
+        if (L < j) {
+            doSort(L, j);
+        }
+        if (i < R) {
+            doSort(i, R);
+        }
+    }
+
+    public static void sort(Vector theKeys) {
+        if (theKeys == null)
+            return;
+        if (theKeys.size() <= 0)
+            return;
+        keys = theKeys;
+        doSort(0, keys.size() - 1);
+    }
+
+}
+*/
